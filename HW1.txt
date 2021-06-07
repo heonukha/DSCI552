@@ -1,1 +1,368 @@
-HI
+## DSCI 552 HW1
+## Heonuk Ha
+## https://github.com/heonukha/DSCI552_HW1.git
+
+
+## Q1
+
+import os
+
+
+os.chdir("C:/Users/heonu/Desktop/Summer 2021/DSCI552/PDF Homework New/Homework 1 Data/vertebral_column_data")
+
+
+# 1-a) Data download: https://archive.ics.uci.edu/ml/datasets/Vertebral+Column
+
+import numpy as np
+import warnings
+warnings.filterwarnings(action="ignore", module="scipy", message="^internal gelsd")
+import pandas as pd
+%matplotlib inline
+import matplotlib.pyplot as plt
+import seaborn as sns
+from subprocess import check_output
+from sklearn.preprocessing import LabelEncoder
+
+
+import pandas as pd
+import numpy as np
+
+df1 = pd.read_csv("C:/Users/heonu/Desktop/Summer 2021/DSCI552/PDF Homework New/Homework 1 Data/vertebral_column_data/column_2C.csv")
+
+df1 = pd.DataFrame(df1)
+
+df1.dataframeName = 'column_2C.csv'
+nRow, nCol = df1.shape
+print(f'There are {nRow} rows and {nCol} columns')
+
+
+df1.info()
+df1.head()
+df1.describe()
+
+# 1-b-i) Scatterplots
+
+color_list = ['orange' if i=='Abnormal' else 'blue' for i in df1.loc[:,'class']]
+pd.plotting.scatter_matrix(df1.loc[:, df1.columns != 'class'],
+                                       c=color_list,
+                                       figsize= [15,15],
+                                       diagonal='hist',
+                                       alpha=0.5,
+                                       s = 200,
+                                       marker = '+',
+                                       edgecolor= "black")
+
+plt.show()
+
+
+# 1-b-ii) Boxplots
+sns.set_style("whitegrid")
+plt.figure(figsize=(14,14))
+sns.boxplot(data=df1, orient="h")
+
+sns.set(style="ticks")
+sns.pairplot(df1, hue="class", size = 4)
+
+
+# 1-b-iii) training, test data
+normal = df1[df1['class'] == 'Normal']
+normal[0:10]
+
+abnormal = df1[df1['class'] == 'Abnormal']
+abnormal[0:10]
+
+train_data = pd.concat([normal[0:70], abnormal[0:140]])
+
+train_data.reset_index(drop=True,inplace=True)
+
+train_data
+
+
+test_data = pd.concat([normal[70:], abnormal[140:]])
+test_data.reset_index(drop=True,inplace=True)
+
+test_data
+
+
+X_train = np.array(training_data[['pelvic_incidence', 'pelvic_tilt', 'lumbar_lordosis_angle', 'sacral_slope', 'pelvic_radius', 'degree_spondylolisthesis']])
+y_train = np.array(training_data['class'])
+y_train = np.array([0 if u == 'Normal' else 1 for u in y_train])
+
+X_test = np.array(test_data[['pelvic_incidence', 'pelvic_tilt', 'lumbar_lordosis_angle', 'sacral_slope', 'pelvic_radius', 'degree_spondylolisthesis']])
+y_test = np.array(test_data['class'])
+y_test = np.array([0 if u == 'Normal' else 1 for u in y_test])
+
+
+# 1-c-i) Euclidean code
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import mean_squared_error
+
+train_error_throughtout = []
+
+knn = KNeighborsClassifier(n_neighbors=3)
+knn.fit(X_train, y_train)
+
+y_pred = knn.predict(X_test)
+y_train_pred = knn.predict(X_train)
+
+from sklearn.metrics import accuracy_score
+y_test_error = 1 - accuracy_score(y_test, y_pred)
+y_train_error = 1 - accuracy_score(y_train, y_train_pred)
+train_error_throughtout.append(y_train_error)
+y_test_error
+
+
+
+# 1-c-ii) k-nearest
+k = np.arange(1,211,1)
+train_error = {}
+test_error_array = []
+train_error_array = []
+test_error = {}
+k = k[::-1]
+for i in k:
+    knn = KNeighborsClassifier(n_neighbors=i)
+    knn.fit(X_train, y_train)
+    pred_test = knn.predict(X_test)
+    pred_train = knn.predict(X_train)
+    test_error_array.append(1 - accuracy_score(y_test, pred_test))
+    train_error_array.append(1 - accuracy_score(y_train, pred_train))
+    test_error.update({i: 1 - accuracy_score(y_test, pred_test)})
+    train_error.update({i: 1 - accuracy_score(y_train, pred_train)})
+test_error #  4: 0.06000000000000005
+
+
+test_error_array = np.array(test_error_array)
+print(train_error_throughtout)
+train_error_array = np.array(train_error_array)
+
+train_error_throughtout.append(min(train_error_array))
+
+plt.plot(k, test_error_array, color='red', markerfacecolor='blue')
+plt.plot(k, train_error_array, color='blue', markerfacecolor='blue')
+plt.xlim(210,-5)
+plt.xlabel("K")
+plt.ylabel("Errors")
+
+optimal_k = [key for m in [min(test_error.values())] for key,val in test_error.items() if val == m][-1]
+optimal_k
+
+
+
+# 1-c-iii) k-nearest
+from sklearn.metrics import confusion_matrix
+knn = KNeighborsClassifier(n_neighbors=optimal_k)
+knn.fit(X_train, y_train)
+y_pred = knn.predict(X_test)
+
+cm = confusion_matrix(y_test, y_pred)
+cm
+
+tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
+
+true_pos_rate = tp/(cm[1,0] + cm[1,1])
+true_pos_rate
+
+true_neg_rate = tn/(cm[0,0] + cm[0,1])
+true_neg_rate
+
+precison = tp/(cm[0,1] + cm[1,1])
+precison
+
+f_score = (2*tp)/(2*tp+fp+fn)
+f_score
+
+train_data
+
+best_test_error_rate = {}
+best_train_error_rate = {}
+test_error_array = []
+train_error_array = []
+
+
+for n in range(10, 211, 10):
+    test_error_array = []
+    train_error_array = []
+    temp_train_data = pd.concat([train_data[0:int(round(n / 3))], train_data[70:70 + int(round(2 * n / 3))]])
+    temp_train_data.reset_index(drop=True, inplace=True)
+
+    X_temp_train_data = np.array(temp_train_data[
+                                        ['pelvic_incidence', 'pelvic_tilt', 'lumbar_lordosis_angle', 'sacral_slope',
+                                         'pelvic_radius', 'degree_spondylolisthesis']])
+    y_temp_train_data = np.array(temp_train_data['class'])
+    y_temp_train_data = np.array([0 if u == 'Normal' else 1 for u in y_temp_train_data])
+
+    for k in range(1, n, 5):
+        knn = KNeighborsClassifier(n_neighbors=k)
+        knn.fit(X_temp_train_data, y_temp_train_data)
+        pred_test = knn.predict(X_test)
+        test_error_array.append(1 - accuracy_score(y_test, pred_test))
+        pred_train = knn.predict(X_temp_train_data)
+        train_error_array.append(1 - accuracy_score(y_temp_train_data, pred_train))
+    best_test_error_rate.update({n: min(test_error_array)})
+    best_train_error_rate.update({n: min(train_error_array)})
+
+best_test_error_rate
+
+
+
+train_error_throughtout.append(min(best_train_error_rate.values()))
+
+plt.plot(range(10, 211, 10), best_test_error_rate.values(), color='blue', markerfacecolor='blue')
+plt.xlabel("N")
+plt.ylabel("Errors")
+
+
+# 1-d-i)
+# a
+k = np.arange(1,200,5)
+test_error_array = {}
+train_error_array = {}
+for i in k:
+    knn = KNeighborsClassifier(n_neighbors=i,p=1)
+    knn.fit(X_train, y_train)
+    y_test_pred = knn.predict(X_test)
+    test_error_array.update({i: 1 - accuracy_score(y_test, y_test_pred)})
+    y_train_pred = knn.predict(X_train)
+    train_error_array.update({i: 1 - accuracy_score(y_train, y_train_pred)})
+test_error_array
+
+train_error_throughtout.append(min(train_error_array.values()))
+
+optimal_k = [key for m in [min(test_error_array.values())] for key,val in test_error_array.items() if val == m][-1]
+optimal_k
+
+# b
+p_values = []
+for i in range(1,11):
+    p_values.append(10**(i/10))
+p_values
+
+
+test_error_array = {}
+train_error_array = {}
+for i in p_values:
+    knn = KNeighborsClassifier(n_neighbors=optimal_k,p=i)
+    knn.fit(X_train, y_train)
+    y_test_pred = knn.predict(X_test)
+    test_error_array.update({i: 1 - accuracy_score(y_test, y_test_pred)})
+    y_train_pred = knn.predict(X_train)
+    train_error_array.update({i: 1 - accuracy_score(y_train, y_train_pred)})
+test_error_array
+
+
+train_error_throughtout.append(min(train_error_array.values()))
+optimal_p = [key for m in [min(test_error_array.values())] for key,val in test_error_array.items() if val == m]
+
+optimal_p
+
+
+import math
+best_p = [math.log10(x) for x in optimal_p]
+best_p
+
+
+# c
+k = np.arange(1,200,5)
+test_error_array = {}
+train_error_array = {}
+for i in k:
+    knn = KNeighborsClassifier(n_neighbors=i,metric='chebyshev')
+    knn.fit(X_train, y_train)
+    y_test_pred = knn.predict(X_test)
+    test_error_array.update({i: 1 - accuracy_score(y_test, y_test_pred)})
+    y_train_pred = knn.predict(X_train)
+    train_error_array.update({i: 1 - accuracy_score(y_train, y_train_pred)})
+test_error_array
+
+
+
+
+train_error_throughtout.append(min(train_error_array.values()))
+optimal_k = [key for m in [min(test_error_array.values())] for key,val in test_error_array.items() if val == m][0]
+optimal_k
+
+
+
+
+# d
+k = np.arange(1,200,5)
+test_error_array = {}
+train_error_array = {}
+covarience_x = np.cov(X_train)
+covarience_x_inverse = np.linalg.inv(covarience_x)
+for i in k:
+    knn = KNeighborsClassifier(n_neighbors=i,algorithm='brute',
+                               metric='mahalanobis',
+                               metric_params={'VI': covarience_x_inverse})
+    knn.fit(X_train, y_train)
+    y_test_pred = knn.predict(X_test)
+    test_error_array.update({i: 1 - accuracy_score(y_test, y_test_pred)})
+    y_train_pred = knn.predict(X_train)
+    train_error_array.update({i: 1 - accuracy_score(y_train, y_train_pred)})
+test_error_array
+
+
+# e
+k = np.arange(1,200,5)
+test_error_array = {}
+train_error_array = {}
+for i in k:
+    knn = KNeighborsClassifier(n_neighbors=i,weights='distance')
+    knn.fit(X_train, y_train)
+    y_test_pred = knn.predict(X_test)
+    test_error_array.update({i: 1 - accuracy_score(y_test, y_test_pred)})
+    y_train_pred = knn.predict(X_train)
+    train_error_array.update({i: 1 - accuracy_score(y_train, y_train_pred)})
+test_error_array
+
+
+train_error_throughtout.append(min(train_error_array.values()))
+best_error = min(test_error_array.values())
+best_error
+
+
+k = np.arange(1,200,5)
+test_error_array = {}
+train_error_array = {}
+for i in k:
+    knn = KNeighborsClassifier(n_neighbors=i,weights='distance',p=1)
+    knn.fit(X_train, y_train)
+    y_test_pred = knn.predict(X_test)
+    test_error_array.update({i: 1 - accuracy_score(y_test, y_test_pred)})
+    y_train_pred = knn.predict(X_train)
+    train_error_array.update({i: 1 - accuracy_score(y_train, y_train_pred)})
+test_error_array
+
+
+train_error_throughtout.append(min(train_error_array.values()))
+best_error = min(test_error_array.values())
+best_error
+
+
+k = np.arange(1,200,5)
+test_error_array = {}
+train_error_array = {}
+for i in k:
+    knn = KNeighborsClassifier(n_neighbors=i,metric='chebyshev',weights='distance')
+    knn.fit(X_train, y_train)
+    y_test_pred = knn.predict(X_test)
+    test_error_array.update({i: 1 - accuracy_score(y_test, y_test_pred)})
+    y_train_pred = knn.predict(X_train)
+    train_error_array.update({i: 1 - accuracy_score(y_train, y_train_pred)})
+test_error_array
+
+
+train_error_throughtout.append(min(train_error_array.values()))
+best_error = min(test_error_array.values())
+best_error
+
+
+# f
+lowest_train_error = min(train_error_throughtout)
+lowest_train_error
+
+
+
+
+
