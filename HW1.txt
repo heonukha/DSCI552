@@ -1,6 +1,5 @@
 ## DSCI 552 HW1
 ## Heonuk Ha
-## https://github.com/heonukha/DSCI552_HW1.git
 
 
 ## Q1
